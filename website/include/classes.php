@@ -1,4 +1,7 @@
 <?php
+//ini_set('display_errors', 1);
+//ini_set('display_startup_errors', 1);
+//error_reporting(E_ALL);
 
 if (file_exists(getcwd() . "/include/credentials.php")) {
     require('credentials.php');
@@ -785,10 +788,10 @@ class Application {
 
     // Logs in an existing user and will return the $errors array listing any errors encountered
     public function login($username, $password, &$errors) {
-
+        
         $this->debug("Login attempted");
         $this->auditlog("login", "attempt: $username, password length = ".strlen($password));
-
+        
         // Validate the user input
         if (empty($username)) {
             $errors[] = "Missing username";
@@ -796,234 +799,79 @@ class Application {
         if (empty($password)) {
             $errors[] = "Missing password";
         }
-
+        
         // Only try to query the data into the database if there are no validation errors
         if (sizeof($errors) == 0) {
-
-
-
-              $url = "https://xz5at7hgsa.execute-api.us-east-1.amazonaws.com/default/login";
-          			$data = array(
-          				'username'=>$username
-          			);
-          			$data_json = json_encode($data);
-
-          			$ch = curl_init();
-          			curl_setopt($ch, CURLOPT_URL, $url);
-          			curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json', 'x-api-key: DXI70GJDCXIg9NRwzHt62Kopv2hyYNW8l8B3WTV8','Content-Length: ' . strlen($data_json)));
-          			curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'POST');
-          			curl_setopt($ch, CURLOPT_POSTFIELDS, $data_json);
-          			curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-          			$response  = curl_exec($ch);
-          			$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                $user = json_decode($response);
-
-
-                  $passwordhash = $user->passwordhash;
-                  $emailvalidated = $user->emailvalidated;
-                  $userid = $user->userid;
-                  $email = $user->email;
-
-
-
-            if ($response === FALSE) {
-      				$errors[] = "An unexpected failure occurred contacting the web service.";
-      			} else {
-
-
-
-      				if($httpCode == 400) {
-
-      					// JSON was double-encoded, so it needs to be double decoded
-      					$errorsList = json_decode(json_decode($response))->errors;
-      					foreach ($errorsList as $err) {
-      						$errors[] = $err;
-      					}
-
-      					if (sizeof($errors) == 0) {
-      						$errors[] = "Bad input";
-      					}
-
-      				} else if($httpCode == 500) {
-
-      					$errorsList = json_decode(json_decode($response))->errors;
-      					foreach ($errorsList as $err) {
-      						$errors[] = $err;
-      					}
-      					if (sizeof($errors) == 0) {
-      						$errors[] = "Server error";
-      					}
-
-      				} else if($httpCode == 200) {
-
-                if (!password_verify($password, $passwordhash)) {
-
-                      $errors[] = "Bad username/password combination";
-                      $this->auditlog("login", "bad password: password length = ".strlen($password));
-
-                  } else if ($emailvalidated == 0) {
-
-                      $errors[] = "Login error. Email not validated. Please check your inbox and/or spam folder.";
-
-                  } else {
-                    $otp = rand(100000,999999);
-                    $to = $email;
-                    $message = "OTP Login Authentication: " . $otp;
-                    $headers = 'From: sp05337@georgiasouthern.edu' . "\r\n" .
-                        'Reply-To: sp05337@georgiasouthern.edu' . "\r\n";
-
-                    mail($to, $subject, $message, $headers);
-
-
-                  		$message = "Check your email and submit OTP";
-                     $this->newSession($userid, $errors);
-                     $this->auditlog("login", "success: $username, $userid");
-
-                     $url = "https://xz5at7hgsa.execute-api.us-east-1.amazonaws.com/default/validateotp";
-              			$data = array(
-              				'otp'=>$otp,
-              				'userid'=>$userid,
-              				'email'=>$email
-              			);
-
-                   $data_json = json_encode($data);
-
-             			$ch = curl_init();
-             			curl_setopt($ch, CURLOPT_URL, $url);
-             			curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json', 'x-api-key: DXI70GJDCXIg9NRwzHt62Kopv2hyYNW8l8B3WTV8','Content-Length: ' . strlen($data_json)));
-             			curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'POST');
-             			curl_setopt($ch, CURLOPT_POSTFIELDS, $data_json);
-             			curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-             			$response  = curl_exec($ch);
-             			$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-             			if ($response === FALSE) {
-             				$errors[] = "An unexpected failure occurred contacting the web service.";
-             			} else {
-                     if($httpCode == 400) {
-
-             					// JSON was double-encoded, so it needs to be double decoded
-             					$errorsList = json_decode(json_decode($response))->errors;
-             					foreach ($errorsList as $err) {
-             						$errors[] = $err;
-             					}
-             					if (sizeof($errors) == 0) {
-             						$errors[] = "Bad input";
-             					}
-             				}else if($httpCode == 500) {
-
-             					$errorsList = json_decode(json_decode($response))->errors;
-             					foreach ($errorsList as $err) {
-             						$errors[] = $err;
-             					}
-             					if (sizeof($errors) == 0) {
-             						$errors[] = "Server error";
-             					}
-
-             				} else if($httpCode == 200) {
-
-
-
-             				}
-                   }
-                  }
-
-
-      			}
-
-          }
-
-
-
-
-            curl_close($ch);
-         }
-
-         else {
+            
+            // Connect to the database
+            $dbh = $this->getConnection();
+            
+            // Construct a SQL statement to perform the insert operation
+            $sql = "SELECT userid, passwordhash, emailvalidated FROM users " .
+                "WHERE username = :username";
+            
+            // Run the SQL select and capture the result code
+            $stmt = $dbh->prepare($sql);
+            $stmt->bindParam(":username", $username);
+            $result = $stmt->execute();
+            
+            // If the query did not run successfully, add an error message to the list
+            if ($result === FALSE) {
+                
+                $errors[] = "An unexpected error occurred";
+                $this->debug($stmt->errorInfo());
+                $this->auditlog("login error", $stmt->errorInfo());
+                
+                
+                // If the query did not return any rows, add an error message for bad username/password
+            } else if ($stmt->rowCount() == 0) {
+                
+                $errors[] = "Bad username/password combination";
+                $this->auditlog("login", "bad username: $username");
+                
+                
+                // If the query ran successfully and we got back a row, then the login succeeded
+            } else {
+                
+                // Get the row from the result
+                $row = $stmt->fetch();
+                
+                // Check the password
+                if (!password_verify($password, $row['passwordhash'])) {
+                    
+                    $errors[] = "Bad username/password combination";
+                    $this->auditlog("login", "bad password: password length = ".strlen($password));
+                    
+                } else if ($row['emailvalidated'] == 0) {
+                    
+                    $errors[] = "Login error. Email not validated. Please check your inbox and/or spam folder.";
+                    
+                } else {
+                    
+                    // Create a new session for this user ID in the database
+                    $userid = $row['userid'];
+                    $this->newSession($userid, $errors);
+                    $this->auditlog("login", "success: $username, $userid");
+                    
+                }
+                
+            }
+            
+            // Close the connection
+            $dbh = NULL;
+            
+        } else {
             $this->auditlog("login validation error", $errors);
         }
+        
+        
         // Return TRUE if there are no errors, otherwise return FALSE
         if (sizeof($errors) == 0){
             return TRUE;
         } else {
             return FALSE;
         }
-      }
-
-
-
-
-
-    public function otpValidate($otp, $errors){
-      // Only try to insert the data into the database if there are no validation errors
-      if (sizeof($errors) == 0) {
-
-        $url = "https://xz5at7hgsa.execute-api.us-east-1.amazonaws.com/default/otpinput";
-       $data = array(
-         'otp'=>$otp,
-         'userid'=>$userid,
-         'email'=>$email
-       );
-
-       $data_json = json_encode($data);
-
-       $ch = curl_init();
-       curl_setopt($ch, CURLOPT_URL, $url);
-       curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json', 'x-api-key: DXI70GJDCXIg9NRwzHt62Kopv2hyYNW8l8B3WTV8','Content-Length: ' . strlen($data_json)));
-       curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'POST');
-       curl_setopt($ch, CURLOPT_POSTFIELDS, $data_json);
-       curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-       $response  = curl_exec($ch);
-       $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-       if ($response === FALSE) {
-         $errors[] = "An unexpected failure occurred contacting the web service.";
-       } else {
-
-         if($httpCode == 400) {
-
- 					// JSON was double-encoded, so it needs to be double decoded
- 					$errorsList = json_decode(json_decode($response))->errors;
- 					foreach ($errorsList as $err) {
- 						$errors[] = $err;
- 					}
- 					if (sizeof($errors) == 0) {
- 						$errors[] = "Bad input";
- 					}
-
- 				} else if($httpCode == 500) {
-
-           $errorsList = json_decode(json_decode($response))->errors;
-           foreach ($errorsList as $err) {
-             $errors[] = $err;
-           }
-           if (sizeof($errors) == 0) {
-             $errors[] = "Server error";
-           }
-
-         } else if($httpCode == 200) {
-
-           $this->auditlog("otp validation", "success");
-
-         }
-      }
-
-
-    curl_close($ch);
-
-      } else {
-          $this->auditlog("otp validation error", $errors);
-      }
-
-      // Return TRUE if there are no errors, otherwise return FALSE
-      if (sizeof($errors) == 0){
-          return TRUE;
-      } else {
-          return FALSE;
-      }
-  }
-
-
+    }
 
     // Logs out the current user based on session ID
     public function logout() {
@@ -2056,8 +1904,8 @@ class Application {
               $message = "A password reset request for this account has been submitted at http://52.4.120.179/it5236/website/. ".
                   "If you did not make this request, please ignore this message. No other action is necessary. ".
                   "To reset your password, please click the following link: $pageLink?id=$passwordresetid";
-              $headers = 'From: developer@photofolio.com' . "\r\n" .
-                  'Reply-To: sp05337@georgiasouthern.edu' . "\r\n";
+              $headers = 'From: michael@growinginyou.me' . "\r\n" .
+                  'Reply-To: mj03382@georgiasouthern.edu' . "\r\n";
 
               mail($to, $subject, $message, $headers);
 
