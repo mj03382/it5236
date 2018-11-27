@@ -287,7 +287,7 @@ class Application {
             $pageLink = str_replace("register.php", "login.php", $pageLink);
             $to      = $email;
             $subject = 'Please confirm your email!';
-            $message = "A request has been made to create an account at Photofolio Spectatular for this email address. ".
+            $message = "A request has been made to create an account at Growing In You for this email address. ".
                 "If you did not make this request, please ignore this message. No other action is necessary. ".
                 "To confirm this address, please click the following link: $pageLink?id=$validationid";
             $headers = 'From: michael@growinginyou.me' . "\r\n" .
