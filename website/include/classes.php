@@ -53,7 +53,7 @@ class Application {
             $message = implode( ",", $message);
         }
 
-        $url = "https://xz5at7hgsa.execute-api.us-east-1.amazonaws.com/default/auditlog";
+        $url = "https://xz5at7hgsa.execute-api.us-east-1.amazonaws.com/default/AuditLog";
   			$data = array(
   				'context'=>$context,
   				'message'=>$message,
