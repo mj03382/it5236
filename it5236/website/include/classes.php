@@ -1,4 +1,7 @@
 <?php
+//ini_set('display_errors', 1);
+//ini_set('display_startup_errors', 1);
+//error_reporting(E_ALL);
 
 if (file_exists(getcwd() . "/include/credentials.php")) {
     require('credentials.php');
@@ -50,7 +53,7 @@ class Application {
             $message = implode( ",", $message);
         }
 
-        $url = "https://xz5at7hgsa.execute-api.us-east-1.amazonaws.com/default/auditlog";
+        $url = "https://xz5at7hgsa.execute-api.us-east-1.amazonaws.com/default/AuditLog";
   			$data = array(
   				'context'=>$context,
   				'message'=>$message,
@@ -284,7 +287,7 @@ class Application {
             $pageLink = str_replace("register.php", "login.php", $pageLink);
             $to      = $email;
             $subject = 'Please confirm your email!';
-            $message = "A request has been made to create an account at Photofolio Spectatular for this email address. ".
+            $message = "A request has been made to create an account at Growing In You for this email address. ".
                 "If you did not make this request, please ignore this message. No other action is necessary. ".
                 "To confirm this address, please click the following link: $pageLink?id=$validationid";
             $headers = 'From: michael@growinginyou.me' . "\r\n" .
@@ -454,7 +457,7 @@ class Application {
       // Assume an empty list of regs
         $regs = array();
 
-		$url = "https://xz5at7hgsa.execute-api.us-east-1.amazonaws.com/default/userregistrations?userid=$userid";
+		$url = "https://xz5at7hgsa.execute-api.us-east-1.amazonaws.com/default/userregistration?userid=$userid";
 
 		$ch = curl_init();
 		curl_setopt($ch, CURLOPT_URL, $url);
@@ -496,7 +499,7 @@ class Application {
 
         $this->auditlog("getUserRegistrations", "success");
 	            $this->auditlog("getUserRegistrations", "web service response => " . $response);
-				$regs = json_decode($response)->userregistrations;
+				$regs = json_decode($response)->userregistration;
 		        $this->auditlog("getUserRegistrations", "success");
 
 			}
@@ -869,8 +872,6 @@ class Application {
             return FALSE;
         }
     }
-
-
 
     // Logs out the current user based on session ID
     public function logout() {
@@ -1900,11 +1901,11 @@ class Application {
               $pageLink = str_replace("reset.php", "password.php", $pageLink);
               $to      = $email;
               $subject = 'Password reset';
-              $message = "A password reset request for this account has been submitted at http://52.4.120.179/it5236/website/. ".
+              $message = "A password reset request for this account has been submitted at http://34.239.176.220/it5236/website/. ".
                   "If you did not make this request, please ignore this message. No other action is necessary. ".
                   "To reset your password, please click the following link: $pageLink?id=$passwordresetid";
-              $headers = 'From: developer@photofolio.com' . "\r\n" .
-                  'Reply-To: sp05337@georgiasouthern.edu' . "\r\n";
+              $headers = 'From: michael@growinginyou.me' . "\r\n" .
+                  'Reply-To: mj03382@georgiasouthern.edu' . "\r\n";
 
               mail($to, $subject, $message, $headers);
 
