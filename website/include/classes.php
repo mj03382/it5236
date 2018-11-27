@@ -1901,7 +1901,7 @@ class Application {
               $pageLink = str_replace("reset.php", "password.php", $pageLink);
               $to      = $email;
               $subject = 'Password reset';
-              $message = "A password reset request for this account has been submitted at http://52.4.120.179/it5236/website/. ".
+              $message = "A password reset request for this account has been submitted at http://34.239.176.220/it5236/website/. ".
                   "If you did not make this request, please ignore this message. No other action is necessary. ".
                   "To reset your password, please click the following link: $pageLink?id=$passwordresetid";
               $headers = 'From: michael@growinginyou.me' . "\r\n" .
